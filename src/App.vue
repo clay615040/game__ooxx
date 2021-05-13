@@ -1,28 +1,159 @@
-<template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
+<template lang="pug">
+  #app
+    transition(v-on:enter="enter" v-bind:css="false" appear)
+      .butter-cheese-eggs(v-show="true")
+        div(v-for="(block, index) in grid" @click="select(index)" :key="index")
+          block(:figure.sync="block.figure")
+    
+    transition(v-on:enter="enterWin" v-bind:css="false")
+      win(v-show="winner" :click-handler="restart")
+
+  //- #block
+    .block
+      transition(v-on:enter="enter" v-bind:css="false")
+        span(v-show="figure > -1") {{ fig }}
+
+  //- #win
+    .win
+      h2 Win
+      <!--<button @click="clickHandler">Play again</button>-->
 </template>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.15.0/lodash.min.js"> </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.0/TweenMax.min.js"> </script>
 <script>
-import HelloWorld from './components/HelloWorld.vue'
 
 export default {
   name: 'App',
-  components: {
-    HelloWorld
-  }
 }
+
+let state = {
+  grid: _.map(_.range(0, 9), (index) => {
+    return { index, figure: -1 }
+  }),
+  myTurn: false
+}
+
+const appState = _.cloneDeep(state)
+
+const block = Vue.component('block', {
+  name: 'block',
+  
+  template: '#block',
+  
+  props: {
+    figure: {
+      type: Number,
+      default: -1
+    }
+  },
+  
+  computed: {
+    fig () {
+      return this.figure === 0 ? 'O' : 'X'
+    }
+  },
+  
+  data () {
+    return {
+      selected: false
+    }
+  },
+  
+  methods: {
+    enter (el, done) {
+      TweenMax.from(el, 1, {
+        autoAlpha: 0,
+        scale: 0,
+        ease: Elastic.easeOut.config(1.25, 0.5),
+        onComplete: done
+      })
+    }
+  }
+}) 
+
+const win = Vue.component('win', {
+  name: 'win',
+  template: '#win',
+  props: {
+    clickHandler: {
+      type: Function,
+      default: null
+    }
+  }
+})
+
+const app = new Vue({
+  name: 'app',
+  
+  el: '#app',
+  
+  data() {
+    return state
+  },
+  
+  components: {
+    block
+  },
+  
+  computed: {
+    winner () {
+      const wins = ['012', '036', '345', '147', '258', '678','048', '246']
+      const grid = this.grid
+      const player = this.myTurn ? 0 : 1
+      const moves = _.reduce(this.grid, (result, value, index) => {
+        if (value.figure === player) {
+          result.push(index)
+        }
+        
+        return result
+      }, [])
+      
+      return !!_.find(wins, win => {
+        const combination = _.map(win.split(''), n => parseInt(n));
+        console.log('combination', combination, moves)
+        
+        return _.difference(combination, moves).length === 0;
+      })
+    }
+  },
+  
+  methods: {
+    select (index) {
+      const {figure} = this.grid[index]
+      
+      if (figure > -1) {
+        return;
+      }
+      
+      this.grid[index].figure = this.myTurn ? 1 : 0
+      this.myTurn = !this.myTurn
+    },
+    
+    restart () {
+      this.grid = appState.grid
+      this.myTurn = appState.myTurn
+    },
+    
+    enter (el, done) {
+      TweenMax.from(el, 1, {
+        autoAlpha: 0,
+        scale: 0,
+        ease: Elastic.easeOut.config(1.25, 0.5)
+      })
+    },
+    
+    enterWin (el) {
+      TweenMax.from(el, 1, {
+        autoAlpha: 0,
+        scale: 0,
+        ease: Elastic.easeOut.config(1.25, 0.5)
+      })
+    }
+  }
+})
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+<style lang="scss" scoped>
+  @import './style.scss';
 </style>
